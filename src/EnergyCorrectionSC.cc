@@ -37,13 +37,13 @@ StatusCode EnergyCorrectionSC::MakeEnergyCorrections(const pandora::Cluster *con
         return STATUS_CODE_SUCCESS;
     }
 
-    const pandora::TrackList &trackList = pCluster->GetAssociatedTrackList();
-    const unsigned int nTrackAssociations = trackList.size();
+//    const pandora::TrackList &trackList = pCluster->GetAssociatedTrackList();
+//    const unsigned int nTrackAssociations = trackList.size();
 
-    if (0 == nTrackAssociations)
-    {
-        return STATUS_CODE_SUCCESS;
-    }
+//    if (0 == nTrackAssociations)
+//    {
+//        return STATUS_CODE_SUCCESS;
+//    }
 
     //Here to check the cluster type so that the corresponding correction function is called
     bool isHCalCluster(false), isECalCluster(false);
@@ -59,7 +59,7 @@ StatusCode EnergyCorrectionSC::MakeEnergyCorrections(const pandora::Cluster *con
     pandora::CaloHitList clusterCaloHitList;
     clusterCaloHitList.insert(nonIsolatedCaloHitList.begin(), nonIsolatedCaloHitList.end());
     clusterCaloHitList.insert(isolatedCaloHitList.begin(), isolatedCaloHitList.end());
-
+/*
     int N_lim(0), N_av(0);
     float maxDiff(std::numeric_limits<float>::min());
     float maxHitEnergy(std::numeric_limits<float>::min());
@@ -118,7 +118,7 @@ StatusCode EnergyCorrectionSC::MakeEnergyCorrections(const pandora::Cluster *con
     }
 
     std::cout << "Software Compensation Doing Something At Clustering" << std::endl;
-
+*/
     this->clusterType(clusterCaloHitList, isECalCluster, isHCalCluster);
 
     if (isECalCluster)
