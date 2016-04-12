@@ -48,7 +48,6 @@ StatusCode CellEnergyAlgorithm::Run()
         const float px = cartesianVector.GetX();
         const float py = cartesianVector.GetY();
         const float pz = cartesianVector.GetZ();
-        std::cout << px << " " << py << " " << pz << std::endl; 
         const float momentum(std::sqrt(px * px + py * py + pz * pz));
         const float cosTheta((momentum > std::numeric_limits<float>::epsilon()) ? pz / momentum : -999.f);
         pfoMomentum.push_back(momentum);
@@ -63,11 +62,10 @@ StatusCode CellEnergyAlgorithm::Run()
     std::vector<int> numberOfHitsInCluster;
     std::vector<float> rawEnergyOfCluster;
     std::vector<float> correctedEnergyOfCluster;
-    std::vector<float> clusterDistributionMetrics;
     std::vector<int> nECalHits;
     std::vector<int> nHCalHits;
     std::vector<int> isEMShower;
-    std::vector<int> nHitsAboveMean;
+    std::vector<int> numberTrackAssociations;
 
     for (pandora::ClusterList::const_iterator clusterIter = pCurrentClusterList->begin(), clusterIterEnd = pCurrentClusterList->end(); clusterIter != clusterIterEnd; ++clusterIter)
     {
@@ -75,37 +73,65 @@ StatusCode CellEnergyAlgorithm::Run()
         const bool emShower(PandoraContentApi::GetPlugins(*this)->GetParticleId()->IsEmShower(pCluster));
         int necalHits(0);
         int nhcalHits(0);
+//        const float clusterHadEnergy = pCluster->GetHadronicEnergy();
+//        const float clusterCorHadEnergy = pCluster->GetCorrectedHadronicEnergy(this->GetPandora());
+        const pandora::TrackList &trackList = pCluster->GetAssociatedTrackList();
+        const unsigned int nTrackAssociations = trackList.size();
 
         int emshower(0);
         if (emShower) emshower = 1;
 
+        // PFO only has the nonIsolated calo hits associated to it.  Topologically this is right, but the energy of the
+        // isolated hits is used in PFO creation.
+        const pandora::OrderedCaloHitList &orderedCaloHitList(pCluster->GetOrderedCaloHitList());
+        // This converts the OrderedCaloHitList into a standard CaloHitList
+        pandora::CaloHitList nonIsolatedCaloHitList;
+        orderedCaloHitList.GetCaloHitList(nonIsolatedCaloHitList);
+        // Isolated calo hit list associated to the cluster
+        const pandora::CaloHitList &isolatedCaloHitList(pCluster->GetIsolatedCaloHitList());
         pandora::CaloHitList clusterCaloHitList;
-        pCluster->GetOrderedCaloHitList().GetCaloHitList(clusterCaloHitList);
+        clusterCaloHitList.insert(nonIsolatedCaloHitList.begin(), nonIsolatedCaloHitList.end());
+        clusterCaloHitList.insert(isolatedCaloHitList.begin(), isolatedCaloHitList.end());
 
         this->ClusterType(clusterCaloHitList,necalHits,nhcalHits);
+/*
+        const bool isSoftwareCompOn(std::fabs(clusterCorHadEnergy - clusterHadEnergy) > std::numeric_limits<float>::min());
 
-        int nHitsAbvMean(0);
-        float clusterDistributionMetric(0.f);
-        float clusterHadEnergy(pCluster->GetHadronicEnergy());
-        this->ClusterDistributionMetric(clusterCaloHitList,clusterDistributionMetric,clusterHadEnergy,nHitsAbvMean);
+        if (clusterHadEnergy > 10 && nTrackAssociations!=0)
+        {
+            std::cout << "NTracks : " << nTrackAssociations << std::endl;
+            std::cout << "CorE    : " << clusterCorHadEnergy << std::endl;
+            std::cout << "HadE    : " << clusterHadEnergy << std::endl;
+            std::cout << "Software compensation changing energy : " << isSoftwareCompOn << std::endl;
+        }
 
-//        if (!isEMShower)
-        std::cout << "Number of hits in cluster : " << pCluster->GetNCaloHits() << std::endl;
+        if ( isSoftwareCompOn && clusterHadEnergy > 10 && 0 != nTrackAssociations)
+        {
+            std::cout << "Number of hits in cluster   : " << pCluster->GetNCaloHits() << std::endl;
+            std::cout << "Hadronic Energy of Cluster  : " << pCluster->GetHadronicEnergy() << std::endl;
+            std::cout << "Corrected Energy of Cluster : " << pCluster->GetCorrectedHadronicEnergy(this->GetPandora()) << std::endl;
+            std::cout << "NECalHits                   : " << necalHits << std::endl;
+            std::cout << "NHCalHits                   : " << nhcalHits << std::endl;
+
+            std::string detectorView = "default";
+            PandoraMonitoringApi::SetEveDisplayParameters(this->GetPandora(), true, (detectorView.find("xz") != std::string::npos) ? DETECTOR_VIEW_XZ : (detectorView.find("xy") != std::string::npos) ? DETECTOR_VIEW_XY : DETECTOR_VIEW_DEFAULT, -1.f, clusterHadEnergy);
+            PandoraMonitoringApi::VisualizeCaloHits(this->GetPandora(), &clusterCaloHitList, "SoftCompCaloHits", SOFTCOMPWEIGHT);
+            PandoraMonitoringApi::VisualizeCaloHits(this->GetPandora(), &clusterCaloHitList, "SoftCompCaloHits", CLUSTERHADE);
+            PandoraMonitoringApi::VisualizeParticleFlowObjects(this->GetPandora(), pPfoList, "AllPFOs", AUTO, true, true);
+            PandoraMonitoringApi::ViewEvent(this->GetPandora());
+        }
+*/
+        numberTrackAssociations.push_back(nTrackAssociations);
         numberOfHitsInCluster.push_back(pCluster->GetNCaloHits());
         rawEnergyOfCluster.push_back(pCluster->GetHadronicEnergy());
         correctedEnergyOfCluster.push_back(pCluster->GetCorrectedHadronicEnergy(this->GetPandora()));
-        clusterDistributionMetrics.push_back(clusterDistributionMetric);
         nECalHits.push_back(necalHits);
         nHCalHits.push_back(nhcalHits);
         isEMShower.push_back(emshower);
-        nHitsAboveMean.push_back(nHitsAbvMean);
-
-        this->Display(clusterCaloHitList);
     }
 
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "RawEnergyOfCluster", &rawEnergyOfCluster));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "CorrectedEnergyOfCluster", &correctedEnergyOfCluster));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "ClusterDistributionMetrics", &clusterDistributionMetrics));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "NumberOfHitsInCluster", &numberOfHitsInCluster));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "NumberOfPFOsInEvent", numberOfPfos));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "PFOMomentum", &pfoMomentum));
@@ -113,7 +139,7 @@ StatusCode CellEnergyAlgorithm::Run()
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "nECalHits", &nECalHits));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "nHCalHits", &nHCalHits));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "IsEMShower", &isEMShower));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "nHitsAboveMean", &nHitsAboveMean));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "ClusterEnergyTree", "NumberTrackAssociations", &numberTrackAssociations));
     PANDORA_MONITORING_API(FillTree(this->GetPandora(), "ClusterEnergyTree"));
 
    return STATUS_CODE_SUCCESS;
@@ -138,71 +164,9 @@ StatusCode CellEnergyAlgorithm::ClusterType(const pandora::CaloHitList &caloHitL
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-StatusCode CellEnergyAlgorithm::ClusterDistributionMetric(const pandora::CaloHitList &caloHitList, float &clusterDistributionMetric, float &clusterHadronicEnergy, int &nHitsAbvMean) const
-{
-    std::vector<float> cellEnergyDensities;
-    float averageEnergyDensity(0.f);
-    for(pandora::CaloHitList::const_iterator iter = caloHitList.begin() , endIter = caloHitList.end() ; endIter != iter ; ++iter)
-    {
-        const pandora::CaloHit *pCaloHit = *iter;
-        const float cellVolume(pCaloHit->GetCellSize0() * pCaloHit->GetCellSize1() * pCaloHit->GetCellThickness());
-        const float cellEnergy(pCaloHit->GetHadronicEnergy()/clusterHadronicEnergy);
-        const float cellEnergyDensity(cellEnergy/cellVolume);
-        cellEnergyDensities.push_back(cellEnergyDensity);
-        averageEnergyDensity += cellEnergyDensity;
-    }
-    averageEnergyDensity /= caloHitList.size();
-
-    float rms(0.f);
-    float minCellEnergyDensity(std::numeric_limits<float>::max());
-    float maxCellEnergyDensity(-std::numeric_limits<float>::max());
-
-    for(std::vector<float>::iterator it = cellEnergyDensities.begin(); it != cellEnergyDensities.end(); ++it)
-    {
-        float energyDensity = *it;
-        rms += pow(energyDensity-averageEnergyDensity,2);
-        if (energyDensity > averageEnergyDensity) nHitsAbvMean++;
-        if (energyDensity > maxCellEnergyDensity) maxCellEnergyDensity = energyDensity;
-        if (energyDensity < minCellEnergyDensity) minCellEnergyDensity = energyDensity;
-    }
-    clusterDistributionMetric = pow(rms,0.5);
-/*    float lastPre90PercentPoint(0.f);
-
-    sort(cellEnergyDensities.begin(), cellEnergyDensities.end());
-
-    for(std::vector<float>::iterator it = cellEnergyDensities.begin(); it != cellEnergyDensities.end(); ++it)
-    {   
-        float energyDensity = *it;
-        if (energyDensity < minCellEnergyDensity + 0.9 * (maxCellEnergyDensity - minCellEnergyDensity) ) lastPre90PercentPoint = energyDensity;
-    }
-
-    //float energyDensityRange(maxCellEnergyDensity-minCellEnergyDensity);
-
-    clusterDistributionMetric = (lastPre90PercentPoint - minCellEnergyDensity) / ( maxCellEnergyDensity - minCellEnergyDensity );
-*/
-    return STATUS_CODE_SUCCESS;
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-StatusCode CellEnergyAlgorithm::Display(const CaloHitList &caloHitList) const
-{
-    std::string detectorView = "default";
-    PandoraMonitoringApi::SetEveDisplayParameters(this->GetPandora(), true, (detectorView.find("xz") != std::string::npos) ? DETECTOR_VIEW_XZ : (detectorView.find("xy") != std::string::npos) ? DETECTOR_VIEW_XY : DETECTOR_VIEW_DEFAULT, -1.f, 0.5);
-
-    PandoraMonitoringApi::VisualizeCaloHits(this->GetPandora(), &caloHitList, "Cluster", AUTOENERGY);
-    PandoraMonitoringApi::ViewEvent(this->GetPandora());
-
-    return STATUS_CODE_SUCCESS;
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
 StatusCode CellEnergyAlgorithm::ReadSettings(const TiXmlHandle xmlHandle)
 {
     // Read settings from xml file here
-
-//    PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, XmlHelper::ReadValue(xmlHandle, "HotHadCellEnergy", m_HotHadCellEnergy));
 
     PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, XmlHelper::ReadValue(xmlHandle, "RootFileName", m_RootFileName));
 

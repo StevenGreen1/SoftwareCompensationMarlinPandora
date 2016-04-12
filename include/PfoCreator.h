@@ -60,8 +60,22 @@ public:
      */    
     pandora::StatusCode CreateParticleFlowObjects(EVENT::LCEvent *pLCEvent);
 
-    float FindHitDensityBin(float hitEnergy, float cellsize);
-    float SCEnergyCorrection(const pandora::ParticleFlowObject *const pPfo);
+    /**
+     *  @breif  Find energy desnity of CaloHit in mips per cell
+     *
+     *  @param  pCaloHit calo hit to find energy density of
+     *  @param  energyDensity energy density to set
+     */ 
+
+    pandora::StatusCode FindDensity(const pandora::CaloHit *const pCaloHit, float &energyDensity) const;
+
+    /**
+     *  @breif  Apply software compensation to PFO
+     *
+     *  @param  pPfo pfo to apply software compensation to
+     *  @param  pfoEnergyEstimator software compensation pfo energy estimator
+     */ 
+    pandora::StatusCode SCEnergyCorrection(const pandora::ParticleFlowObject *const pPfo, float &pfoEnergyEstimator) const;
 
 private:
     const Settings          m_settings;                         ///< The pfo creator settings

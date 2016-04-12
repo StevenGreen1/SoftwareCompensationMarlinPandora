@@ -59,15 +59,16 @@ private:
      */
     pandora::StatusCode SCHCalECalSplitClusterEnergyCorrectionFunction(float clusterEnergyEstimation, const pandora::CaloHitList &caloHitList, float &energyCorrection) const;
 
+    /**
+     *  @brief  Calculate energy density in units of MIP per cell
+     */
+    pandora::StatusCode FindDensity(const pandora::CaloHit *const pCaloHit, float &energyDensity) const;
+
     pandora::FloatVector          m_SCEnergyConstants1;            //
     pandora::FloatVector          m_SCEnergyConstants2;            //
     bool                          m_cheating;  
     float                         m_trueEnergy;
-
-    //Lan add to make cluster energy distribution
-    //TFile *fCluster;
-    //TH1F *hClusterE;
-
+    float                         m_clusterMinHadEnergy;           // Minimum hadronic energy for a cluster to apply software compensation to
 };
 
 #endif // #ifndef SC_ENERGY_CORRECTION_PLUGINS_H

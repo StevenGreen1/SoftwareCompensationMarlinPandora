@@ -48,108 +48,92 @@ PfoCreator::~PfoCreator()
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-float PfoCreator::FindHitDensityBin(float hitEnergy, float cellsize){
-  cellsize /= 100;
-  //std::cout << "cellsize1 " << cellsize << std::endl;
-  
-  float volume = cellsize*cellsize*0.05;
-  float mip2gev = 0.0225;
-  
-  float hitEnergyInMIP = hitEnergy/mip2gev;
-
-  const int NBIN = 10;
-  //float lowMIP[NBIN]  = {0.49,  2, 3.5, 5.5,  8, 10, 14, 17, 21, 25, 30, 35};
-  //float highMIP[NBIN] = {  2, 3.5, 5.5,   8, 10, 14, 17, 21, 25, 30, 35, 1e6};
-  float lowMIP[NBIN]  = {0.3,  2, 5.5,  8, 10, 14, 17, 21, 25, 30};
-  float highMIP[NBIN] = {  2, 5.5,   8, 10, 14, 17, 21, 25, 30, 1e6};
-
-  float rho = 0;
-  for (int ibin = 0; ibin < NBIN; ibin++){
-
-    if (hitEnergyInMIP>=lowMIP[ibin] && hitEnergyInMIP<highMIP[ibin]){
-      rho = (lowMIP[ibin]+highMIP[ibin])/2;
-      if (ibin==(NBIN-1))
-	rho = 40;
-    
-      rho *= mip2gev;
-      rho /= volume;
-    }
-  }
-
-  return rho;
-}
-
-float PfoCreator::SCEnergyCorrection(const pandora::ParticleFlowObject *const pPfo)
+pandora::StatusCode PfoCreator::FindDensity(const pandora::CaloHit *const pCaloHit, float &energyDensity) const
 {
-  std::cout << "PfoCreator::SCEnergyCorrection being called" << std::endl;
-  float PFOenergyEstimation = pPfo->GetEnergy();
+    const int NBIN = 10;
+    float lowMIP[NBIN]  = {0.3,  2, 5.5,  8, 10, 14, 17, 21, 25, 30};
+    float highMIP[NBIN] = {  2, 5.5,   8, 10, 14, 17, 21, 25, 30, 1e6};
 
-  float E_SC(0.f);
+    const float cellVolume = pCaloHit->GetCellSize0() * pCaloHit->GetCellSize1() * pCaloHit->GetCellThickness() / 1000000;
+    const float mipEquivalentEnergy = pCaloHit->GetMipEquivalentEnergy();
+    const float hitEnergyHadronic(pCaloHit->GetHadronicEnergy());
 
-  float p10 = m_settings.m_SCparameters.at(0);
-  float p11 = m_settings.m_SCparameters.at(1);
-  float p12 = m_settings.m_SCparameters.at(2);
-
-  float p20 = m_settings.m_SCparameters.at(3);
-  float p21 = m_settings.m_SCparameters.at(4);
-  float p22 = m_settings.m_SCparameters.at(5);
-
-  float p30 = m_settings.m_SCparameters.at(6);
-  float p31 = m_settings.m_SCparameters.at(7);
-  float p32 = m_settings.m_SCparameters.at(8);
-
-  float p1 = p10 + p11*PFOenergyEstimation + p12*PFOenergyEstimation*PFOenergyEstimation;
-  float p2 = p20 + p21*PFOenergyEstimation + p22*PFOenergyEstimation*PFOenergyEstimation;
-  float p3 = p30/(p31 + exp(p32*PFOenergyEstimation));
-
-  const pandora::ClusterList &clusterList(pPfo->GetClusterList());
-  
-  for (pandora::ClusterList::const_iterator cIter = clusterList.begin(), cIterEnd = clusterList.end(); cIter != cIterEnd; ++cIter)
+    for (int ibin = 0; ibin < NBIN; ibin++)
     {
-      const pandora::Cluster *pPandoraCluster = *cIter;
-
-      pandora::CaloHitList pandoraCaloHitList;
-      pPandoraCluster->GetOrderedCaloHitList().GetCaloHitList(pandoraCaloHitList);
-
-      for (pandora::CaloHitList::const_iterator hIter = pandoraCaloHitList.begin(), hIterEnd = pandoraCaloHitList.end(); hIter != hIterEnd; ++hIter)
-	{
-
-	  const pandora::CaloHit *pPandoraCaloHit= *hIter;
-	  EVENT::CalorimeterHit *pCalorimeterHit = (EVENT::CalorimeterHit*)(pPandoraCaloHit->GetParentCaloHitAddress());
-	  
-	  const float hitEnergy(pCalorimeterHit->getEnergy());
-	  const CHT cht(pCalorimeterHit->getType());
-	  
-	  const float cellsize = pPandoraCaloHit->GetCellSize1();
-	  
-	  if (cht.is(CHT::hcal)) {
-	    float rho = FindHitDensityBin(hitEnergy,cellsize);
-	    float weight = p1*exp(p2*rho)+p3;
-	    E_SC += hitEnergy*weight;	  
-	  } else {
-	    E_SC += hitEnergy;
-	  }
-	}//end of loop on calo hit list
-
-    //const EVENT::CalorimeterHitVec &calorimeterHitVec((*iter)->getCalorimeterHits());	  
-    //for (EVENT::CalorimeterHitVec::const_iterator hitIter = calorimeterHitVec.begin(), hitIterEnd = calorimeterHitVec.end(); hitIter != hitIterEnd; ++hitIter) {
-    //const EVENT::CalorimeterHit *pCalorimeterHit = *hitIter;
-	    
-    //const float hitEnergy(pCalorimeterHit->getEnergy());
-    //const CHT cht(pCalorimeterHit->getType());
-
-    //if (cht.is(CHT::hcal)) {
-    //float rho = FindHitDensityBin(hitEnergy);
-    //float weight = p1*exp(p2*rho)+p3;
-    //E_SC += hitEnergy*weight;	  
-    //} else {
-    //E_SC += hitEnergy;
-    //}
-    //}
-  }
-
-  return E_SC;
+        if (mipEquivalentEnergy >= lowMIP[ibin] && mipEquivalentEnergy < highMIP[ibin])
+        {
+            energyDensity = (lowMIP[ibin]+highMIP[ibin])/2;
+            if (ibin==(NBIN-1))
+            {
+                energyDensity = 40;
+            }
+            const float mip2gev = hitEnergyHadronic / mipEquivalentEnergy;
+            energyDensity = energyDensity * mip2gev;
+            energyDensity /= cellVolume;
+        }
+    }
+    return pandora::STATUS_CODE_SUCCESS;
 }
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+pandora::StatusCode PfoCreator::SCEnergyCorrection(const pandora::ParticleFlowObject *const pPfo, float &pfoEnergyEstimator) const
+{
+    std::cout << "Software compensation correcting neutral hadron energies at PFO stage." << std::endl;
+
+    float PFOenergyEstimation = pPfo->GetEnergy();
+
+    const float p10 = m_settings.m_SCparameters.at(0);
+    const float p11 = m_settings.m_SCparameters.at(1);
+    const float p12 = m_settings.m_SCparameters.at(2);
+
+    const float p20 = m_settings.m_SCparameters.at(3);
+    const float p21 = m_settings.m_SCparameters.at(4);
+    const float p22 = m_settings.m_SCparameters.at(5);
+
+    const float p30 = m_settings.m_SCparameters.at(6);
+    const float p31 = m_settings.m_SCparameters.at(7);
+    const float p32 = m_settings.m_SCparameters.at(8);
+
+    const float p1 = p10 + p11*PFOenergyEstimation + p12*PFOenergyEstimation*PFOenergyEstimation;
+    const float p2 = p20 + p21*PFOenergyEstimation + p22*PFOenergyEstimation*PFOenergyEstimation;
+    const float p3 = p30/(p31 + exp(p32*PFOenergyEstimation));
+
+    const pandora::ClusterList &clusterList(pPfo->GetClusterList());
+
+    // Question: Should we not correct the PFO as a whole rather than individual clusters?
+ 
+    for (pandora::ClusterList::const_iterator cIter = clusterList.begin(), cIterEnd = clusterList.end(); cIter != cIterEnd; ++cIter)
+    {
+        const pandora::Cluster *pPandoraCluster = *cIter;
+        pandora::CaloHitList pandoraCaloHitList;
+        pPandoraCluster->GetOrderedCaloHitList().GetCaloHitList(pandoraCaloHitList);
+
+        for (pandora::CaloHitList::const_iterator hIter = pandoraCaloHitList.begin(), hIterEnd = pandoraCaloHitList.end(); hIter != hIterEnd; ++hIter)
+	{
+           const pandora::CaloHit *pPandoraCaloHit= *hIter;
+           EVENT::CalorimeterHit *pCalorimeterHit = (EVENT::CalorimeterHit*)(pPandoraCaloHit->GetParentCaloHitAddress());
+  
+           const float hitEnergy(pCalorimeterHit->getEnergy());
+           const CHT cht(pCalorimeterHit->getType());
+  
+           if (cht.is(CHT::hcal)) 
+           {
+               float rho(0.f);
+               this->FindDensity(pPandoraCaloHit,rho);
+               float weight = p1*exp(p2*rho)+p3;
+               pfoEnergyEstimator += hitEnergy*weight;
+           } 
+           else 
+           {
+               pfoEnergyEstimator += hitEnergy; 
+           }
+       }
+    }
+    return pandora::STATUS_CODE_SUCCESS;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
 
 pandora::StatusCode PfoCreator::CreateParticleFlowObjects(EVENT::LCEvent *pLCEvent)
 {
@@ -256,8 +240,14 @@ pandora::StatusCode PfoCreator::CreateParticleFlowObjects(EVENT::LCEvent *pLCEve
         pReconstructedParticle->setType((*itPFO)->GetParticleId());
         pReconstructedParticle->setMomentum(momentum);
         pReconstructedParticle->setEnergy((*itPFO)->GetEnergy());
-	if ( m_settings.m_applySoftwareCompensation && (pReconstructedParticle->getTracks().empty()) && (pReconstructedParticle->getType()!=22) )
-	  pReconstructedParticle->setEnergy(SCEnergyCorrection(*itPFO));
+
+        if ( m_settings.m_applySoftwareCompensation && (pReconstructedParticle->getTracks().empty()) && (pReconstructedParticle->getType()!=22) )
+        {
+            float softwareCompensationEnergy(-1.f);
+            this->SCEnergyCorrection(*itPFO,softwareCompensationEnergy);
+            pReconstructedParticle->setEnergy(softwareCompensationEnergy);
+        }
+
         pReconstructedParticle->setMass((*itPFO)->GetMass());
         pReconstructedParticle->setCharge((*itPFO)->GetCharge());
 
