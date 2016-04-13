@@ -145,25 +145,21 @@ StatusCode EnergyCorrectionSC::MakeEnergyCorrections(const pandora::Cluster *con
 StatusCode EnergyCorrectionSC::FindDensity(const pandora::CaloHit *const pCaloHit, float &energyDensity) const
 {
     const int NBIN = 10;
-    float lowMIP[NBIN]  = {0.3,  2, 5.5,  8, 10, 14, 17, 21, 25, 30};
-    float highMIP[NBIN] = {  2, 5.5,   8, 10, 14, 17, 21, 25, 30, 1e6};
-
+    float lowDensity[NBIN] = {0, 2, 5, 7.5, 9.5, 13, 16, 20, 23.5, 28};
+    float highDensity[NBIN] = {2, 5, 7.5, 9.5, 13, 16, 20, 23.5, 28, 1e6};
     const float cellVolume = pCaloHit->GetCellSize0() * pCaloHit->GetCellSize1() * pCaloHit->GetCellThickness() / 1000000;
-    const float mipEquivalentEnergy = pCaloHit->GetMipEquivalentEnergy();
     const float hitEnergyHadronic(pCaloHit->GetHadronicEnergy());
+    const float hitEnergyDensity(hitEnergyHadronic/cellVolume);
 
     for (int ibin = 0; ibin < NBIN; ibin++)
     {
-        if (mipEquivalentEnergy >= lowMIP[ibin] && mipEquivalentEnergy < highMIP[ibin])
+        if (hitEnergyDensity >= lowDensity[ibin] && hitEnergyDensity < highDensity[ibin])
         {
-            energyDensity = (lowMIP[ibin]+highMIP[ibin])/2;
+            energyDensity = (lowDensity[ibin]+highDensity[ibin])/2;
             if (ibin==(NBIN-1))
             {
-                energyDensity = 40;
+                energyDensity = 30;
             }
-            const float mip2gev = hitEnergyHadronic / mipEquivalentEnergy;
-            energyDensity = energyDensity * mip2gev;
-            energyDensity /= cellVolume;
         }
     }
     return STATUS_CODE_SUCCESS;

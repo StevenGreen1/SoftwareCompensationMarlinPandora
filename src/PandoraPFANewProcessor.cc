@@ -20,10 +20,11 @@
 
 #include "ExternalClusteringAlgorithm.h"
 #include "EnergyCorrectionSC.h"
+#include "EnergyCorrectionSCLan.h"
 #include "PandoraPFANewProcessor.h"
 
 #include "CellEnergyAlgorithm.h"
-
+#include "RegisterHitsForSC.h"
 #include <cstdlib>
 
 PandoraPFANewProcessor pandoraPFANewProcessor;
@@ -201,6 +202,11 @@ pandora::StatusCode PandoraPFANewProcessor::RegisterUserComponents() const
     PANDORA_RETURN_RESULT_IF(pandora::STATUS_CODE_SUCCESS, !=, PandoraApi::RegisterEnergyCorrectionPlugin(*m_pPandora,
         "EnergyCorrectionSC", pandora::HADRONIC, new EnergyCorrectionSC));
 
+    PANDORA_RETURN_RESULT_IF(pandora::STATUS_CODE_SUCCESS, !=, PandoraApi::RegisterEnergyCorrectionPlugin(*m_pPandora,
+        "EnergyCorrectionSCLan", pandora::HADRONIC, new EnergyCorrectionSCLan));
+
+    PANDORA_RETURN_RESULT_IF(pandora::STATUS_CODE_SUCCESS, !=, PandoraApi::RegisterAlgorithmFactory(*m_pPandora,
+                                                                                                    "RegisterHitsForSC", new RegisterHitsForSC::Factory));
 
     return pandora::STATUS_CODE_SUCCESS;
 }
