@@ -9,10 +9,11 @@
     <!-- PLUGIN SETTINGS -->
     <HadronicEnergyCorrectionPlugins>EnergyCorrectionSC</HadronicEnergyCorrectionPlugins>
     <EnergyCorrectionSC>
-        <SCEnergyConstantsHighE> 2.47822 -0.0273163 0.000431585 -0.128046 -0.00122036 -1.88328e-05 0.460827 0.633081 -0.0597235 </SCEnergyConstantsHighE>
-        <SCEnergyConstantsSmallE> 2.47822 -0.0273163 0.000431585 -0.128046 -0.00122036 -1.88328e-05 0.460827 0.633081 -0.0597235 </SCEnergyConstantsSmallE>
+        <SCEnergyConstantsHighE> 2.41985 -0.0902137 0.00133613 -0.118089 0.00373349 -0.00014658 0.126489 0.16879 -0.123544 </SCEnergyConstantsHighE>
+        <SCEnergyConstantsSmallE> 2.41985 -0.0902137 0.00133613 -0.118089 0.00373349 -0.00014658 0.126489 0.16879 -0.123544 </SCEnergyConstantsSmallE>
         <Cheating> 0 </Cheating>
         <TrueEnergy> 0. </TrueEnergy>
+        <ClusterMinHadEnergy> 0.0 </ClusterMinHadEnergy>
     </EnergyCorrectionSC>
     <EmShowerPlugin>LCEmShowerId</EmShowerPlugin>
     <PhotonPlugin>LCPhotonId</PhotonPlugin>

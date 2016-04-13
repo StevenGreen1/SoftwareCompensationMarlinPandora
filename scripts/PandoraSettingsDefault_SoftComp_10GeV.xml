@@ -13,7 +13,7 @@
         <SCEnergyConstantsSmallE> 2.41985 -0.0902137 0.00133613 -0.118089 0.00373349 -0.00014658 0.126489 0.16879 -0.123544 </SCEnergyConstantsSmallE>
         <Cheating> 0 </Cheating>
         <TrueEnergy> 0. </TrueEnergy>
-        <ClusterMinHadEnergy> 0.0 </ClusterMinHadEnergy>
+        <ClusterMinHadEnergy> 10.0 </ClusterMinHadEnergy>
     </EnergyCorrectionSC>
     <EmShowerPlugin>LCEmShowerId</EmShowerPlugin>
     <PhotonPlugin>LCPhotonId</PhotonPlugin>
