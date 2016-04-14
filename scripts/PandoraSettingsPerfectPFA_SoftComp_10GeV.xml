@@ -9,8 +9,8 @@
     <!-- PLUGIN SETTINGS -->
     <HadronicEnergyCorrectionPlugins>EnergyCorrectionSC</HadronicEnergyCorrectionPlugins>
     <EnergyCorrectionSC>
-        <SCEnergyConstantsHighE> 2.41985 -0.0902137 0.00133613 -0.118089 0.00373349 -0.00014658 0.126489 0.16879 -0.123544 </SCEnergyConstantsHighE>
-        <SCEnergyConstantsSmallE> 2.41985 -0.0902137 0.00133613 -0.118089 0.00373349 -0.00014658 0.126489 0.16879 -0.123544 </SCEnergyConstantsSmallE>
+        <SCEnergyConstantsHighE> 2.49632 -0.0697302 0.000946986 -0.112311 0.0028182 -9.62602e-05 0.168614 0.224318 -0.0872853 </SCEnergyConstantsHighE>
+        <SCEnergyConstantsSmallE> 2.49632 -0.0697302 0.000946986 -0.112311 0.0028182 -9.62602e-05 0.168614 0.224318 -0.0872853 </SCEnergyConstantsSmallE>
         <Cheating> 0 </Cheating>
         <TrueEnergy> 0. </TrueEnergy>
         <ClusterMinHadEnergy> 10.0 </ClusterMinHadEnergy>
