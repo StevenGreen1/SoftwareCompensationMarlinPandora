@@ -63,11 +63,11 @@ StatusCode RegisterHitsForSC::Run()
 
     const float rawEnergyOfCluster(pCluster->GetHadronicEnergy());
 
-    std::vector<float> cellSize0;// = new std::vector<float>;
-    std::vector<float> cellSize1;// = new std::vector<float>;
-    std::vector<float> cellThickness;// = new std::vector<float>;
-    std::vector<float> hitEnergies;// = new std::vector<float>;
-    std::vector<int> hitType;// = new std::vector<int>;
+    std::vector<float> cellSize0;
+    std::vector<float> cellSize1;
+    std::vector<float> cellThickness;
+    std::vector<float> hitEnergies;
+    std::vector<int> hitType;
 
     for(pandora::CaloHitList::const_iterator hitIter = clusterCaloHitList.begin() , endhitIter = clusterCaloHitList.end() ; endhitIter != hitIter ; ++hitIter)
     {
