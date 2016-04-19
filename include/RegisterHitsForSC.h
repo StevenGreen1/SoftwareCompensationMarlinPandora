@@ -37,13 +37,10 @@ public:
 
 private:
     pandora::StatusCode Run();
-    pandora::StatusCode ClusterType(const pandora::CaloHitList &caloHitList, int &isECalCluster, int &isHCalCluster) const;
-    pandora::StatusCode ExtractCaloHits(const pandora::CaloHitList &caloHitList, std::vector<float> &ECalHitEnergies, std::vector<float> &HCalHitEnergies) const;
     pandora::StatusCode ReadSettings(const pandora::TiXmlHandle xmlHandle);
 
     // Member variables here
     std::string m_myRootFileName;
-//    float m_HotHadCellEnergy;
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------

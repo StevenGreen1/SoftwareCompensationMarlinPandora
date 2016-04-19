@@ -19,11 +19,6 @@
         <OutputPfoListName>PerfectPfos</OutputPfoListName>
         <OutputClusterListName>PerfectPfoClusters</OutputClusterListName>
     </algorithm>
-
-    <algorithm type = "CellEnergyAlgorithm">
-        <RootFileName>CellEnergyAlgorithmRootFile</RootFileName>
-    </algorithm>
-
     <!--algorithm type = "DumpPfosMonitoring"/-->
     <!--algorithm type = "VisualMonitoring"/-->
 </pandora>

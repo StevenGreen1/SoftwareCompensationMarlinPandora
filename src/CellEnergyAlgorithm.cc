@@ -73,8 +73,8 @@ StatusCode CellEnergyAlgorithm::Run()
         const bool emShower(PandoraContentApi::GetPlugins(*this)->GetParticleId()->IsEmShower(pCluster));
         int necalHits(0);
         int nhcalHits(0);
-        const float clusterHadEnergy = pCluster->GetHadronicEnergy();
-        const float clusterCorHadEnergy = pCluster->GetCorrectedHadronicEnergy(this->GetPandora());
+//        const float clusterHadEnergy = pCluster->GetHadronicEnergy();
+//        const float clusterCorHadEnergy = pCluster->GetCorrectedHadronicEnergy(this->GetPandora());
         const pandora::TrackList &trackList = pCluster->GetAssociatedTrackList();
         const unsigned int nTrackAssociations = trackList.size();
 
@@ -94,7 +94,7 @@ StatusCode CellEnergyAlgorithm::Run()
         clusterCaloHitList.insert(isolatedCaloHitList.begin(), isolatedCaloHitList.end());
 
         this->ClusterType(clusterCaloHitList,necalHits,nhcalHits);
-
+/*
         const bool isSoftwareCompOn(std::fabs(clusterCorHadEnergy - clusterHadEnergy) > std::numeric_limits<float>::min());
 
         if (clusterHadEnergy > 10)
@@ -120,7 +120,7 @@ StatusCode CellEnergyAlgorithm::Run()
             PandoraMonitoringApi::VisualizeParticleFlowObjects(this->GetPandora(), pPfoList, "AllPFOs", AUTO, true, true);
             PandoraMonitoringApi::ViewEvent(this->GetPandora());
         }
-
+*/
         numberTrackAssociations.push_back(nTrackAssociations);
         numberOfHitsInCluster.push_back(pCluster->GetNCaloHits());
         rawEnergyOfCluster.push_back(pCluster->GetHadronicEnergy());

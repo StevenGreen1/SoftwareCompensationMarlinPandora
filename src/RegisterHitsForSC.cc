@@ -32,143 +32,82 @@ RegisterHitsForSC::~RegisterHitsForSC()
 
 StatusCode RegisterHitsForSC::Run()
 {
-    std::cout << "===== Running RegisterHitsForSC algorithm =====" << std::endl;
-
-    // Add PFO information
-    //********************
     const pandora::PfoList *pPfoList = NULL;
-    std::vector<float> *EnergyOfPfos = new std::vector<float>;
     PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::GetCurrentList(*this, pPfoList));
-    for (pandora::PfoList::const_iterator pfoIter = pPfoList->begin(), pfoIterEnd = pPfoList->end(); pfoIter != pfoIterEnd; ++pfoIter)
-      {
-	const pandora::Pfo *const pPfo = *pfoIter;
-	EnergyOfPfos->push_back(pPfo->GetEnergy());
-      }
+    const int numberOfPfos(pPfoList->size());
 
-    int numberOfPfos(pPfoList->size());
-    //********************
-
-    std::cout << "numberOfPfos " << numberOfPfos << std::endl;
-
-    //Add cluster and information
-    //********************
-    const pandora::ClusterList *pCurrentClusterList = NULL;
-    PANDORA_RETURN_RESULT_IF(STATUS_CODE_SUCCESS, !=, PandoraContentApi::GetCurrentList(*this, pCurrentClusterList));
-
-    int numberOfClusters(pCurrentClusterList->size());
-    std::vector<int> *numberOfHitsInCluster = new std::vector<int>;
-    std::vector<float> *rawEnergyOfCluster = new std::vector<float>;
-    std::vector<float> *rawIsolatedEnergyOfCluster = new std::vector<float>;
-    std::vector<int> *isEMShower = new std::vector<int>;
-    std::vector<int> *nECalHits = new std::vector<int>;
-    std::vector<int> *nHCalHits = new std::vector<int>;
-    std::vector<float> *m_CellSize0 = new std::vector<float>;
-    std::vector<float> *m_CellSize1 = new std::vector<float>;
-    std::vector<float> *m_CellThickness = new std::vector<float>;
-    std::vector<float> *HitEnergies = new std::vector<float>;
-
-    for (pandora::ClusterList::const_iterator clusterIter = pCurrentClusterList->begin(), clusterIterEnd = pCurrentClusterList->end(); clusterIter != clusterIterEnd; ++clusterIter)
+    if (numberOfPfos != 1)
     {
-        const Cluster *const pCluster = *clusterIter;
-        const bool emShower(PandoraContentApi::GetPlugins(*this)->GetParticleId()->IsEmShower(pCluster));
-        int necalHits(0);
-        int nhcalHits(0);
-
-        int emshower(0);
-        if (emShower) emshower = 1;
-
-	// PFO only has the nonIsolated calo hits associated to it.  Topologically this is right, but the energy of the
-	// isolated hits is used in PFO creation.
-	const pandora::OrderedCaloHitList &orderedCaloHitList(pCluster->GetOrderedCaloHitList());
-	// This converts the OrderedCaloHitList into a standard CaloHitList
-	pandora::CaloHitList nonIsolatedCaloHitList;
-	orderedCaloHitList.GetCaloHitList(nonIsolatedCaloHitList);
-	// Isolated calo hit list associated to the cluster
-	const pandora::CaloHitList &isolatedCaloHitList(pCluster->GetIsolatedCaloHitList());
-	pandora::CaloHitList clusterCaloHitList;
-	clusterCaloHitList.insert(nonIsolatedCaloHitList.begin(), nonIsolatedCaloHitList.end());
-	clusterCaloHitList.insert(isolatedCaloHitList.begin(), isolatedCaloHitList.end());
-    
-	for(pandora::CaloHitList::const_iterator hitIter = clusterCaloHitList.begin() , endhitIter = clusterCaloHitList.end() ; endhitIter != hitIter ; ++hitIter)
-	  {   
-	    const pandora::CaloHit *pCaloHit = *hitIter;
-	    m_CellSize0->push_back(pCaloHit->GetCellSize0());
-	    m_CellSize1->push_back(pCaloHit->GetCellSize1());
-	    m_CellThickness->push_back(pCaloHit->GetCellThickness());
-
-	    HitEnergies->push_back(pCaloHit->GetHadronicEnergy());
-	  }
-	
-
-        this->ClusterType(clusterCaloHitList,necalHits,nhcalHits);
-
-	std::cout << "necalHits " << necalHits << " nhcalHits " << nhcalHits << std::endl;
-
-	//std::vector<float> ecalHitEnergies, hcalHitEnergies;
-	//this->ExtractCaloHits(clusterCaloHitList, ecalHitEnergies, hcalHitEnergies);	
-
-        std::cout << "Number of hits in cluster : " << pCluster->GetNCaloHits() << std::endl;
-        numberOfHitsInCluster->push_back(clusterCaloHitList.size());
-        rawEnergyOfCluster->push_back(pCluster->GetHadronicEnergy());
-        rawIsolatedEnergyOfCluster->push_back(pCluster->GetIsolatedHadronicEnergy());
-        isEMShower->push_back(emshower);
-        nECalHits->push_back(necalHits);
-        nHCalHits->push_back(nhcalHits);
+        return STATUS_CODE_SUCCESS;
     }
 
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "numberOfPfos", numberOfPfos));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "numberOfClusters", numberOfClusters));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "NumberOfHitsInCluster", numberOfHitsInCluster));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "EnergyOfPfos", EnergyOfPfos));
+    const pandora::Pfo *const pPfo = *pPfoList->begin();
+    const float pfoEnergy(pPfo->GetEnergy());
+    const pandora::ClusterList *pClusterList = &pPfo->GetClusterList();
+    const int numberOfClusters(pClusterList->size());
+
+    if (numberOfClusters != 1)
+    {
+        return STATUS_CODE_SUCCESS;
+    }
+
+    const Cluster *const pCluster = *pClusterList->begin();
+
+    const pandora::OrderedCaloHitList &orderedCaloHitList(pCluster->GetOrderedCaloHitList());
+    pandora::CaloHitList nonIsolatedCaloHitList;
+    orderedCaloHitList.GetCaloHitList(nonIsolatedCaloHitList);
+    const pandora::CaloHitList &isolatedCaloHitList(pCluster->GetIsolatedCaloHitList());
+    pandora::CaloHitList clusterCaloHitList;
+    clusterCaloHitList.insert(nonIsolatedCaloHitList.begin(), nonIsolatedCaloHitList.end());
+    clusterCaloHitList.insert(isolatedCaloHitList.begin(), isolatedCaloHitList.end());
+
+    const float rawEnergyOfCluster(pCluster->GetHadronicEnergy());
+
+    std::vector<float> cellSize0;
+    std::vector<float> cellSize1;
+    std::vector<float> cellThickness;
+    std::vector<float> hitEnergies;
+    std::vector<int> hitType;
+
+    for(pandora::CaloHitList::const_iterator hitIter = clusterCaloHitList.begin() , endhitIter = clusterCaloHitList.end() ; endhitIter != hitIter ; ++hitIter)
+    {
+        const pandora::CaloHit *pCaloHit = *hitIter;
+        const float cellSize0ToAdd(pCaloHit->GetCellSize0());
+        const float cellSize1ToAdd(pCaloHit->GetCellSize1());
+        const float cellThicknessToAdd(pCaloHit->GetCellThickness());
+        const float cellHadronicEnergy(pCaloHit->GetHadronicEnergy());
+
+        cellSize0.push_back(cellSize0ToAdd);
+        cellSize1.push_back(cellSize1ToAdd);
+        cellThickness.push_back(cellThicknessToAdd);
+        hitEnergies.push_back(cellHadronicEnergy);
+
+        if (HCAL == pCaloHit->GetHitType())
+        {
+            hitType.push_back(2);
+        }
+
+        else if (ECAL == pCaloHit->GetHitType())
+        {
+            hitType.push_back(1);
+        }
+
+        else
+        {
+            hitType.push_back(3);
+        }
+    }
+
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "EnergyOfPfo", pfoEnergy));
     PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "RawEnergyOfCluster", rawEnergyOfCluster));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "RawIsolatedEnergyOfCluster", rawIsolatedEnergyOfCluster));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "IsEMShower", isEMShower)); 
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "nECalHits", nECalHits));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "nHCalHits", nHCalHits));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "CellSize0", m_CellSize0));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "CellSize1", m_CellSize1));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "CellThickness", m_CellThickness));
-    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "HitEnergies", HitEnergies));
-    //PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "ECalHitEnergies", ECalHitEnergies));
-    //PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "HCalHitEnergies", HCalHitEnergies));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "HitEnergies", &hitEnergies));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "CellSize0", &cellSize0));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "CellSize1", &cellSize1));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "CellThickness", &cellThickness));
+    PANDORA_MONITORING_API(SetTreeVariable(this->GetPandora(), "HitEnergyTree", "HitType", &hitType));
     PANDORA_MONITORING_API(FillTree(this->GetPandora(), "HitEnergyTree"));
 
    return STATUS_CODE_SUCCESS;
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-StatusCode RegisterHitsForSC::ClusterType(const pandora::CaloHitList &caloHitList, int &nECalHits, int &nHCalHits) const
-{
-    for(pandora::CaloHitList::const_iterator iter = caloHitList.begin() , endIter = caloHitList.end() ; endIter != iter ; ++iter)
-    {   
-        const pandora::CaloHit *pCaloHit = *iter;
-        
-        if (HCAL == pCaloHit->GetHitType())
-            nHCalHits++;
-        
-        else if (ECAL == pCaloHit->GetHitType())
-            nECalHits++;
-    }
-    return STATUS_CODE_SUCCESS;
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-StatusCode RegisterHitsForSC::ExtractCaloHits(const pandora::CaloHitList &caloHitList, std::vector<float> &ECalHitEnergies, std::vector<float> &HCalHitEnergies) const
-{
-    for(pandora::CaloHitList::const_iterator iter = caloHitList.begin() , endIter = caloHitList.end() ; endIter != iter ; ++iter)
-    {   
-        const pandora::CaloHit *pCaloHit = *iter;
-	const float hitEnergy(pCaloHit->GetHadronicEnergy());
-        
-        if (HCAL == pCaloHit->GetHitType())
-	  HCalHitEnergies.push_back(hitEnergy);
-        
-        else if (ECAL == pCaloHit->GetHitType())
-	  ECalHitEnergies.push_back(hitEnergy);
-    }
-    return STATUS_CODE_SUCCESS;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------

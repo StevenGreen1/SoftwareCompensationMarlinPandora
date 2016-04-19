@@ -32,16 +32,11 @@ using namespace std;
 bool useEini = false;
 bool useSumEhit = false;
 
-//const int nE = 14;
 const int nE = 10;
-//double Ebeam[nE] = {1, 3, 5, 7};
 double Ebeam[nE] = {10,20,30,40,50,60,70,80,90,100};
 
 const int NBIN = 10;
 const int NPAR = 9;
-
-//float lowMIP[NBIN]  = {0.3,  2, 5.5,  8, 10, 14, 17, 21, 25, 30};//First bin has to start at 0.3 now as the cut in MarlinPandora changed
-//float highMIP[NBIN] = {  2, 5.5,   8, 10, 14, 17, 21, 25, 30, 1e6};
 
 float lowDensity[NBIN]  = {0, 2,   5, 7.5, 9.5, 13, 16,   20, 23.5,  28};
 float highDensity[NBIN] = {2, 5, 7.5, 9.5,  13, 16, 20, 23.5,   28,  1e6};
@@ -127,8 +122,13 @@ class EventC
         /**
           *  @brief  Constructor
           */
-        EventC(double Ebeam, double Ereco, FloatVector *HitEnergies, FloatVector *CellSize0, FloatVector *CellSize1, FloatVector *CellThickness)
+        EventC(double Ebeam, double Ereco, FloatVector *pHitEnergies, FloatVector *pCellSize0, FloatVector *pCellSize1, FloatVector *pCellThickness, IntVector *pHitType)
         { 
+
+
+Modify this to use the hit type to determine whether it's a hcal or ecal hit.  ecal hits have hit type 1, hcal have hit type 2 and others have hit type 3.
+
+
             m_HCalBinEnergy = new FloatVector;
             m_HCalBinEnergy->reserve(NBIN);
             m_HCalHitEnergy = new FloatVector;
@@ -193,7 +193,6 @@ void GetListOfEvents()
 {
     m_EventList.clear();
 
-    //Get tree
     TString path = "/r06/lc/sg568/DESYCollaboration/Training/RootFiles";
 
     for (int ifi = 0; ifi < nE; ifi++)
@@ -214,44 +213,38 @@ void GetListOfEvents()
         TFile *f = TFile::Open(fname);
 
         TTree *m_tree = (TTree*)f->Get("HitEnergyTree");
-    
-        int nPfos = 0;
-        FloatVector *pfoE = 0;
-        int nClusters = 0;
-        FloatVector *HitEnergies = 0;
-        FloatVector *CellSize0 = 0;
-        FloatVector *CellSize1 = 0;
-        FloatVector *CellThickness = 0;
-        FloatVector *RawEnergyOfCluster = 0;
-    
-        TBranch *b_nPfos;
-        TBranch *b_pfoE;
-        TBranch *b_nClusters;
+
+        float energyOfPfo(-1.f);
+        float rawEnergyOfCluster(-1.f);
+        FloatVector *pHitEnergies(NULL);
+        FloatVector *pCellSize0(NULL);
+        FloatVector *pCellSize1(NULL);
+        FloatVector *pCellThickness(NULL);
+        IntVector *pHitType(NULL);
+
+        TBranch *b_EnergyOfPfo;
+        TBranch *b_RawEnergyOfCluster;
         TBranch *b_HitEnergies;
         TBranch *b_CellSize0;
         TBranch *b_CellSize1;
         TBranch *b_CellThickness;
-        TBranch *b_RawEnergyOfCluster;
+        TBranch *b_HitType;
 
-        m_tree->SetBranchAddress("numberOfPfos",       &nPfos,         &b_nPfos);
-        m_tree->SetBranchAddress("EnergyOfPfos",       &pfoE,          &b_pfoE);
-//        m_tree->SetBranchAddress("numberOfClusters",   &nClusters,     &b_nClusters);
-        m_tree->SetBranchAddress("HitEnergies",        &HitEnergies,   &b_HitEnergies);
-        m_tree->SetBranchAddress("CellSize0",          &CellSize0,     &b_CellSize0);
-        m_tree->SetBranchAddress("CellSize1",          &CellSize1,     &b_CellSize1);
-        m_tree->SetBranchAddress("CellThickness",      &CellThickness, &b_CellThickness);
-        m_tree->SetBranchAddress("RawEnergyOfCluster", &RawEnergyOfCluster, &b_RawEnergyOfCluster);
+        m_tree->SetBranchAddress("EnergyOfPfo", energyOfPfo, &b_EnergyOfPfo);
+        m_tree->SetBranchAddress("RawEnergyOfCluster", rawEnergyOfCluster, &b_RawEnergyOfCluster);
+        m_tree->SetBranchAddress("HitEnergies", &pHitEnergies, &b_HitEnergies);
+        m_tree->SetBranchAddress("CellSize0", &pCellSize0, &b_CellSize0);
+        m_tree->SetBranchAddress("CellSize1", &pCellSize1, &b_CellSize1);
+        m_tree->SetBranchAddress("CellThickness", &pCellThickness, &b_CellThickness);
+        m_tree->SetBranchAddress("HitType", &pHitType, &b_HitType);
 
         for (long int iev = 0; iev < m_tree->GetEntries(); iev++)
         {
             m_tree->GetEntry(iev);
       
-            if (nPfos!=1) continue;
-//            if (nClusters!=1) continue;
-            if (pfoE->at(0)<=0) continue;
-            if (HitEnergies->size()==0) continue;
+            if (pHitEnergies->size()==0) continue;
       
-            EventC eventC(Ebeam[ifi],pfoE->at(0),HitEnergies,CellSize0, CellSize1, CellThickness);
+            EventC eventC(Ebeam[ifi],pfoE->at(0), pHitEnergies, pCellSize0, pCellSize1, pCellThickness, pHitType);
             m_EventList.push_back(eventC);
         }
         }
@@ -261,7 +254,6 @@ void GetListOfEvents()
     {
         for (int serialNumber = 0; serialNumber <= 10; serialNumber++)
         {
-        int toAdd = ifi + 1;
         TString fname = path + "/RegisterHitsForSCAlgorithm_PandoraSettingsDefault_NoECorr_Training_ILD_o1_v06_Neutron_pdg_";
         fname += Ebeam[ifi];
         fname += "GeV_";
@@ -277,48 +269,41 @@ void GetListOfEvents()
 
         TTree *m_tree = (TTree*)f->Get("HitEnergyTree");
 
-        int nPfos = 0;
-        FloatVector *pfoE = 0;
-        int nClusters = 0;
-        FloatVector *HitEnergies = 0;
-        FloatVector *CellSize0 = 0;
-        FloatVector *CellSize1 = 0;
-        FloatVector *CellThickness = 0;
-        FloatVector *RawEnergyOfCluster = 0;
+        float energyOfPfo(-1.f);
+        float rawEnergyOfCluster(-1.f);
+        FloatVector *pHitEnergies(NULL);
+        FloatVector *pCellSize0(NULL);
+        FloatVector *pCellSize1(NULL);
+        FloatVector *pCellThickness(NULL);
+        IntVector *pHitType(NULL);
 
-        TBranch *b_nPfos;
-        TBranch *b_pfoE;
-        TBranch *b_nClusters;
+        TBranch *b_EnergyOfPfo;
+        TBranch *b_RawEnergyOfCluster;
         TBranch *b_HitEnergies;
         TBranch *b_CellSize0;
         TBranch *b_CellSize1;
         TBranch *b_CellThickness;
-        TBranch *b_RawEnergyOfCluster;
+        TBranch *b_HitType;
 
-        m_tree->SetBranchAddress("numberOfPfos",       &nPfos,         &b_nPfos);
-        m_tree->SetBranchAddress("EnergyOfPfos",       &pfoE,          &b_pfoE);
-//        m_tree->SetBranchAddress("numberOfClusters",   &nClusters,     &b_nClusters);
-        m_tree->SetBranchAddress("HitEnergies",        &HitEnergies,   &b_HitEnergies);
-        m_tree->SetBranchAddress("CellSize0",          &CellSize0,     &b_CellSize0);
-        m_tree->SetBranchAddress("CellSize1",          &CellSize1,     &b_CellSize1);
-        m_tree->SetBranchAddress("CellThickness",      &CellThickness, &b_CellThickness);
-        m_tree->SetBranchAddress("RawEnergyOfCluster", &RawEnergyOfCluster, &b_RawEnergyOfCluster);
+        m_tree->SetBranchAddress("EnergyOfPfo", energyOfPfo, &b_EnergyOfPfo);
+        m_tree->SetBranchAddress("RawEnergyOfCluster", rawEnergyOfCluster, &b_RawEnergyOfCluster);
+        m_tree->SetBranchAddress("HitEnergies", &pHitEnergies, &b_HitEnergies);
+        m_tree->SetBranchAddress("CellSize0", &pCellSize0, &b_CellSize0);
+        m_tree->SetBranchAddress("CellSize1", &pCellSize1, &b_CellSize1);
+        m_tree->SetBranchAddress("CellThickness", &pCellThickness, &b_CellThickness);
+        m_tree->SetBranchAddress("HitType", &pHitType, &b_HitType);
 
         for (long int iev = 0; iev < m_tree->GetEntries(); iev++)
         {
             m_tree->GetEntry(iev);
 
-            if (nPfos!=1) continue;
-//            if (nClusters!=1) continue;
-            if (pfoE->at(0)<=0) continue;
-            if (HitEnergies->size()==0) continue;
+            if (pHitEnergies->size()==0) continue;
 
-            EventC eventC(Ebeam[ifi],pfoE->at(0),HitEnergies,CellSize0, CellSize1, CellThickness);
+            EventC eventC(Ebeam[ifi],pfoE->at(0), pHitEnergies, pCellSize0, pCellSize1, pCellThickness, pHitType);
             m_EventList.push_back(eventC);
         }
         }
     }
-
 
     cout << "m_EventList size " << m_EventList.size() << endl;
 }
