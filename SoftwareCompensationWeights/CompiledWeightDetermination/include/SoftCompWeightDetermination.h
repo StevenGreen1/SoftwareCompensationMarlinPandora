@@ -16,24 +16,31 @@
 #include "TH1D.h"
 #include "TH2F.h"
 #include "TLegend.h"
+#include "Math/Minimizer.h"
+#include "Math/Factory.h"
+#include "Math/Functor.h"
 #include "TROOT.h"
 #include "TStyle.h"
 
-typedef std::vector< std::vector<float> > FloatMatrix;
-typedef std::vector<float> FloatRow;
-typedef std::vector< std::vector<int> > IntMatrix;
-typedef std::vector<int> IntRow;
+#include "EventClass.h"
+
+typedef std::vector<EventClass*> EventVector;
 
 class SoftCompWeightDetermination
 {
     private:
-        TString     m_RootFiles;
+        std::string     m_RootFiles;
+        EventVector     m_EventVector;
+        IntVector       m_Energies;
+        FloatVector     m_LowEdgeDensityBins;
+        FloatVector     m_HighEdgeDensityBins;
+        FloatVector     m_CentreDensityBin;
 
     public:
         /*
          * Default Constructor
          */
-        SoftCompWeightDetermination(TString m_RootFiles);
+        SoftCompWeightDetermination(std::string rootFiles);
 
         /*
          * Default Destructor
@@ -43,7 +50,30 @@ class SoftCompWeightDetermination
         /*
          * Read data 
          */
-        void LoadResults(TString rootFiles);
+        void LoadEvents();
+
+        /*
+         * Calculate mean bin positions for software compensation weight binning 
+         */
+        void MakeBinDensities();
+
+        /*
+         * Perform TMinuit fit to find software compensation weights
+         */
+        void Fit();
+
+        /*
+         * Work out chi squared for fit
+         */
+        double Chi2(const double *par);
+
+        /*
+         * Return the software compensated energy for the event given using the given parameters
+         */
+        float SoftwareCompensatedEnergy(EventClass *pEventClass, const double *par);
+
+        template <class T>
+        std::string NumberToString(T Number);
 };
 
 #endif

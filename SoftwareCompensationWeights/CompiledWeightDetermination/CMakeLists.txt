@@ -24,7 +24,7 @@ FIND_PACKAGE( ROOT REQUIRED )
 FOREACH( pkg ROOT )
     IF( ${pkg}_FOUND )
         INCLUDE_DIRECTORIES( ${${pkg}_INCLUDE_DIRS} )
-        LINK_LIBRARIES( ${${pkg}_LIBRARIES} /afs/desy.de/project/ilcsoft/sw/x86_64_gcc44_sl6/v01-17-05/root/5.34.10/lib/libMinuit.so )
+        LINK_LIBRARIES( ${${pkg}_LIBRARIES} ) # /afs/desy.de/project/ilcsoft/sw/x86_64_gcc44_sl6/v01-17-05/root/5.34.10/lib/libMinuit.so )
         ADD_DEFINITIONS ( ${${pkg}_DEFINITIONS} )
     ENDIF()
 ENDFOREACH()
@@ -33,9 +33,9 @@ INCLUDE_DIRECTORIES(BEFORE ./include ) # use BEFORE to fix problem on mac osx (c
 
 ### LIBRARY AND TOOLS #######################################################
 
-ADD_EXECUTABLE(SoftCompWeightDetermination ./src/SoftCompWeightDetermination.cxx)
+ADD_EXECUTABLE(SoftCompWeightDetermination ./src/SoftCompWeightDetermination.cxx ./src/EventClass.cc)
 
-INSTALL( TARGETS CalorimeterAnalysis DESTINATION bin PERMISSIONS
+INSTALL( TARGETS SoftCompWeightDetermination DESTINATION bin PERMISSIONS
     OWNER_READ OWNER_WRITE OWNER_EXECUTE
     GROUP_READ GROUP_EXECUTE
     WORLD_READ WORLD_EXECUTE )
