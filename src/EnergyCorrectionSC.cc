@@ -13,7 +13,10 @@
 using namespace pandora;
 
 EnergyCorrectionSC::EnergyCorrectionSC() :
-  m_clusterMinHadEnergy(10.f)
+  m_clusterMinHadEnergy(10.f),
+  m_minCleanHitEnergy(1.f),
+  m_minCleanHitEnergyFraction(0.2f),
+  m_minCleanCorrectedHitEnergy(0.2f)
 {
 }
 
@@ -124,20 +127,103 @@ StatusCode EnergyCorrectionSC::MakeEnergyCorrections(const pandora::Cluster *con
     if (isECalCluster)
     {
         std::cout << "ECal Cluster" << std::endl;
+        this->CleanCluster(pCluster, correctedHadronicEnergy);
         return STATUS_CODE_SUCCESS;
     }
     else if (isHCalCluster)
     {
         std::cout << "HCal Cluster" << std::endl;
-        EnergyCorrectionSC::SCClusterEnergyCorrectionFunction(clusterHadEnergy,clusterCaloHitList, correctedHadronicEnergy);
+        this->SCClusterEnergyCorrectionFunction(clusterHadEnergy,clusterCaloHitList, correctedHadronicEnergy);
     }
     else
     {
         std::cout << "Split Cluster" << std::endl;
-        EnergyCorrectionSC::SCHCalECalSplitClusterEnergyCorrectionFunction(clusterHadEnergy,clusterCaloHitList, correctedHadronicEnergy);
+        this->SCHCalECalSplitClusterEnergyCorrectionFunction(clusterHadEnergy,clusterCaloHitList, correctedHadronicEnergy);
+        this->CleanCluster(pCluster, correctedHadronicEnergy);
     }
 
     return STATUS_CODE_SUCCESS;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+StatusCode EnergyCorrectionSC::CleanCluster(const pandora::Cluster *const pCluster, float &correctedHadronicEnergy) const
+{
+    const unsigned int firstPseudoLayer(this->GetPandora().GetPlugins()->GetPseudoLayerPlugin()->GetPseudoLayerAtIp());
+
+    const float clusterHadronicEnergy(pCluster->GetHadronicEnergy());
+
+    if (std::fabs(clusterHadronicEnergy) < std::numeric_limits<float>::epsilon())
+        throw StatusCodeException(STATUS_CODE_FAILURE);
+
+    bool isFineGranularity(true);
+    const OrderedCaloHitList &orderedCaloHitList(pCluster->GetOrderedCaloHitList());
+
+    for (OrderedCaloHitList::const_iterator layerIter = orderedCaloHitList.begin(), layerIterEnd = orderedCaloHitList.end(); (layerIter != layerIterEnd) && isFineGranularity; ++layerIter)
+    {
+        const unsigned int pseudoLayer(layerIter->first);
+
+        for (CaloHitList::const_iterator hitIter = layerIter->second->begin(), hitIterEnd = layerIter->second->end(); hitIter != hitIterEnd; ++hitIter)
+        {
+            const CaloHit *const pCaloHit = *hitIter;
+
+            if (ECAL != pCaloHit->GetHitType()) continue;
+
+            if (this->GetPandora().GetGeometry()->GetHitTypeGranularity((*hitIter)->GetHitType()) > FINE)
+            {
+                isFineGranularity = false;
+                break;
+            }
+
+            const float hitHadronicEnergy(pCaloHit->GetHadronicEnergy());
+
+            if ((hitHadronicEnergy > m_minCleanHitEnergy) && (hitHadronicEnergy / clusterHadronicEnergy > m_minCleanHitEnergyFraction))
+            {
+                float energyInPreviousLayer(0.);
+
+                if (pseudoLayer > firstPseudoLayer)
+                    energyInPreviousLayer = this->GetHadronicEnergyInLayer(orderedCaloHitList, pseudoLayer - 1);
+
+                float energyInNextLayer(0.);
+
+                if (pseudoLayer < std::numeric_limits<unsigned int>::max())
+                    energyInNextLayer = this->GetHadronicEnergyInLayer(orderedCaloHitList, pseudoLayer + 1);
+
+                const float energyInCurrentLayer = this->GetHadronicEnergyInLayer(orderedCaloHitList, pseudoLayer);
+                float energyInAdjacentLayers(energyInPreviousLayer + energyInNextLayer);
+
+                if (pseudoLayer > firstPseudoLayer)
+                    energyInAdjacentLayers /= 2.f;
+
+                float newHitHadronicEnergy(energyInAdjacentLayers - energyInCurrentLayer + hitHadronicEnergy);
+                newHitHadronicEnergy = std::max(newHitHadronicEnergy, m_minCleanCorrectedHitEnergy);
+
+                if (newHitHadronicEnergy < hitHadronicEnergy)
+                    correctedHadronicEnergy += newHitHadronicEnergy - hitHadronicEnergy;
+            }
+        }
+    }
+
+    return STATUS_CODE_SUCCESS;
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+float EnergyCorrectionSC::GetHadronicEnergyInLayer(const OrderedCaloHitList &orderedCaloHitList, const unsigned int pseudoLayer) const
+{
+    OrderedCaloHitList::const_iterator iter = orderedCaloHitList.find(pseudoLayer);
+
+    float hadronicEnergy(0.f);
+
+    if (iter != orderedCaloHitList.end())
+    {
+        for (CaloHitList::const_iterator hitIter = iter->second->begin(), hitIterEnd = iter->second->end(); hitIter != hitIterEnd; ++hitIter)
+        {
+            hadronicEnergy += (*hitIter)->GetHadronicEnergy();
+        }
+    }
+
+    return hadronicEnergy;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------

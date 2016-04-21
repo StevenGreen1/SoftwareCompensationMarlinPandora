@@ -64,11 +64,20 @@ private:
      */
     pandora::StatusCode FindDensity(const pandora::CaloHit *const pCaloHit, float &energyDensity) const;
 
+    /**
+     *  @brief  ... 
+     */
+    pandora::StatusCode CleanCluster(const pandora::Cluster *const pCluster, float &correctedHadronicEnergy) const;
+    float GetHadronicEnergyInLayer(const pandora::OrderedCaloHitList &orderedCaloHitList, const unsigned int pseudoLayer) const;
+
     pandora::FloatVector          m_SCEnergyConstants1;            //
     pandora::FloatVector          m_SCEnergyConstants2;            //
     bool                          m_cheating;  
     float                         m_trueEnergy;
     float                         m_clusterMinHadEnergy;           // Minimum hadronic energy for a cluster to apply software compensation to
+    float           m_minCleanHitEnergy;                ///< Min calo hit hadronic energy to consider cleaning hit/cluster
+    float           m_minCleanHitEnergyFraction;        ///< Min fraction of cluster energy represented by hit to consider cleaning
+    float           m_minCleanCorrectedHitEnergy;       ///< Min value of new hit hadronic energy estimate after cleaning
 };
 
 #endif // #ifndef SC_ENERGY_CORRECTION_PLUGINS_H
